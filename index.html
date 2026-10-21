@@ -1,98 +1,88 @@
-const NOMBRE_BD = 'fondo-video';
-const TABLA = 'datos';
-const CLAVE = 'video';
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nueva pestaña</title>
+  <style>
+    :root {
+      --fondo: #0a0a10;
+      --texto: #f2f0ff;
+      --boton: rgba(20, 18, 32, 0.72);
+      --borde: rgba(242, 240, 255, 0.28);
+      --foco: #8fd3ff;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: var(--fondo);
+      color: var(--texto);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    #video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .vacio {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 24px;
+    }
+    .vacio[hidden] { display: none; }
+    .vacio p { margin: 0; font-size: 1.25rem; }
+    .vacio small { opacity: 0.7; }
+    button {
+      font: inherit;
+      color: var(--texto);
+      background: var(--boton);
+      border: 1px solid var(--borde);
+      border-radius: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+    button:hover { background: rgba(60, 54, 96, 0.85); }
+    button:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+    .controles {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      display: flex;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    body:hover .controles,
+    .controles:focus-within { opacity: 1; }
+    .controles[hidden] { display: none; }
+    #archivo { display: none; }
+  </style>
+</head>
+<body>
+  <video id="video" autoplay muted loop playsinline></video>
 
-const video = document.getElementById('video');
-const vacio = document.getElementById('vacio');
-const controles = document.getElementById('controles');
-const estado = document.getElementById('estado');
-const archivo = document.getElementById('archivo');
+  <div class="vacio" id="vacio">
+    <p>Elige un video para tu fondo</p>
+    <button type="button" id="elegir">Elegir video</button>
+    <small id="estado">El video se guarda en este navegador.</small>
+  </div>
 
-let urlActual = null;
+  <div class="controles" id="controles" hidden>
+    <button type="button" id="cambiar">Cambiar video</button>
+    <button type="button" id="quitar">Quitar video</button>
+  </div>
 
-function abrirBD() {
-  return new Promise((ok, fallo) => {
-    const pedido = indexedDB.open(NOMBRE_BD, 1);
-    pedido.onupgradeneeded = () => pedido.result.createObjectStore(TABLA);
-    pedido.onsuccess = () => ok(pedido.result);
-    pedido.onerror = () => fallo(pedido.error);
-  });
-}
-
-async function leer() {
-  const bd = await abrirBD();
-  return new Promise((ok, fallo) => {
-    const q = bd.transaction(TABLA).objectStore(TABLA).get(CLAVE);
-    q.onsuccess = () => ok(q.result || null);
-    q.onerror = () => fallo(q.error);
-  });
-}
-
-async function guardar(blob) {
-  const bd = await abrirBD();
-  return new Promise((ok, fallo) => {
-    const tx = bd.transaction(TABLA, 'readwrite');
-    tx.objectStore(TABLA).put(blob, CLAVE);
-    tx.oncomplete = () => ok();
-    tx.onerror = () => fallo(tx.error);
-  });
-}
-
-async function borrar() {
-  const bd = await abrirBD();
-  return new Promise((ok, fallo) => {
-    const tx = bd.transaction(TABLA, 'readwrite');
-    tx.objectStore(TABLA).delete(CLAVE);
-    tx.oncomplete = () => ok();
-    tx.onerror = () => fallo(tx.error);
-  });
-}
-
-function mostrar(blob) {
-  if (urlActual) URL.revokeObjectURL(urlActual);
-  urlActual = null;
-  if (!blob) {
-    video.removeAttribute('src');
-    video.load();
-    vacio.hidden = false;
-    controles.hidden = true;
-    return;
-  }
-  urlActual = URL.createObjectURL(blob);
-  video.src = urlActual;
-  vacio.hidden = true;
-  controles.hidden = false;
-  video.play().catch(() => {});
-}
-
-document.getElementById('elegir').addEventListener('click', () => archivo.click());
-document.getElementById('cambiar').addEventListener('click', () => archivo.click());
-
-document.getElementById('quitar').addEventListener('click', async () => {
-  try {
-    await borrar();
-    mostrar(null);
-  } catch (e) {
-    estado.textContent = 'No se pudo quitar el video. Intenta de nuevo.';
-  }
-});
-
-archivo.addEventListener('change', async () => {
-  const elegido = archivo.files[0];
-  archivo.value = '';
-  if (!elegido) return;
-  try {
-    await guardar(elegido);
-    mostrar(elegido);
-  } catch (e) {
-    vacio.hidden = false;
-    estado.textContent = 'No se pudo guardar el video. Prueba con uno más ligero.';
-  }
-});
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) video.pause();
-  else if (video.src) video.play().catch(() => {});
-});
-
-leer().then(mostrar).catch(() => mostrar(null));
+  <input type="file" id="archivo" accept="video/*">
+  <script src="newtab.js"></script>
+</body>
+</html>
